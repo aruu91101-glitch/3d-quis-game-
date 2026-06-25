@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>3D Квиз: Магия знаний | Учитель и Ученик</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Poppins', 'Segoe UI', 'Montserrat', system-ui, -apple-system, sans-serif;
+            background: #0a0c15;
+            touch-action: pan-x pan-y;
+        }
+
+        /* --- ПРИВЕТСТВЕННОЕ МОДАЛЬНОЕ ОКНО --- */
+        .welcome-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(12px);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.5s ease;
+            pointer-events: auto;
+        }
+        .welcome-card {
+            background: linear-gradient(145deg, #0f1222, #070a14);
+            border-radius: 64px;
+            padding: 32px 24px;
+            max-width: 380px;
+            width: 85%;
+            text-align: center;
+            border: 2px solid rgba(255, 200, 100, 0.8);
+            box-shadow: 0 30px 50px rgba(0,0,0,0.6), 0 0 20px rgba(255,200,80,0.3);
+            animation: floatIn 0.6s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+        }
+        @keyframes floatIn {
+            0% { opacity: 0; transform: scale(0.85) translateY(30px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .welcome-card h1 {
+            font-size: 2.3rem;
+            background: linear-gradient(135deg, #FFE6B0, #FFB347);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 12px;
+        }
+        .welcome-card p {
+            color: #ddd;
+            margin: 15px 0;
+            font-size: 1rem;
+            line-height: 1.4;
+        }
+        .start-btn {
+            background: linear-gradient(95deg, #f0a500, #ff6a00);
+            border: none;
+            border-radius: 60px;
+            padding: 14px 28px;
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #111;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: 0.2s;
+            width: 80%;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+        }
+        .start-btn:active {
+            transform: scale(0.96);
+        }
+        .spark {
+            font-size: 2rem;
+            margin: 8px 0;
+        }
+        .hidden-overlay {
+            display: none;
+        }
+
+        /* --- ОСНОВНОЙ UI (тёмный, контрастный) --- */
+        .ui-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 12px;
+            box-sizing: border-box;
+        }
+        .stats-panel {
+            pointer-events: auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(10, 14, 23, 0.92);
+            backdrop-filter: blur(20px);
+            border-radius: 60px;
+            padding: 10px 20px;
+            margin: 0 8px;
+            border: 1px solid rgba(255, 200, 80, 0.7);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+            font-weight: bold;
+        }
+        .score-box, .q-counter {
+            background: linear-gradient(135deg, #FFD966, #FFB347);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            font-size: 1.3rem;
+            font-weight: 800;
+        }
+        .score-box span, .q-counter span {
+            color: #f0f3fa;
+            background: none;
+            font-weight: 600;
+            margin-right: 6px;
+            font-size: 1rem;
+        }
+        .reset-btn {
+            background: rgba(0,0,0,0.8);
+            border: 1px solid #ffaa44;
+            color: #ffdd99;
+            padding: 6px 16px;
+            border-radius: 40px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.85rem;
+        }
+        .reset-btn:active {
+            transform: scale(0.96);
+            background: #ffaa44;
+            color: #0a0c15;
+        }
+        .question-card {
+            pointer-events: auto;
+            background: rgba(8, 10, 18, 0.88);
+            backdrop-filter: blur(24px);
+            border-radius: 48px;
+            max-width: 550px;
+            width: 92%;
+            margin: 10px auto;
+            padding: 20px 18px;
+            border: 1px solid rgba(255, 200, 100, 0.5);
+            box-shadow: 0 25px 40px rgba(0,0,0,0.6);
+            text-align: center;
+        }
+        .question-text {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 24px;
+            color: #ffffff;
+            text-shadow: 0 2px 8px black;
+        }
+        .options-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .option-btn {
+            pointer-events: auto;
+            background: rgba(0, 0, 0, 0.75);
+            border: 2px solid #ffcc77;
+            border-radius: 100px;
+            padding: 14px 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #FFF9E8;
+            cursor: pointer;
+            transition: 0.1s linear;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .option-btn:before {
+            content: "●";
+            color: #ffcc77;
+            font-size: 1.2rem;
+        }
+        .option-btn:active {
+            transform: scale(0.98);
+        }
+        .option-btn.correct-highlight {
+            background: #1f8a4c;
+            border-color: #ccffaa;
+            box-shadow: 0 0 12px #2ecc71;
+        }
+        .option-btn.wrong-highlight {
+            background: #a1221a;
+            border-color: #ff8888;
+            text-decoration: line-through;
+        }
+        .option-btn:disabled {
+            cursor: default;
+            opacity: 0.85;
+        }
+        .next-btn {
+            pointer-events: auto;
+            background: linear-gradient(95deg, #f0a500, #ff6a00);
+            border: none;
+            border-radius: 60px;
+            padding: 14px 20px;
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: #121212;
+            cursor: pointer;
+            margin-top: 12px;
+            width: 90%;
+            font-family: inherit;
+            letter-spacing: 1.5px;
+        }
+        .next-btn:active {
+            transform: scale(0.97);
+        }
+        .feedback {
+            margin-top: 16px;
+            font-size: 1rem;
+            font-weight: bold;
+            background: rgba(0,0,0,0.75);
+            backdrop-filter: blur(8px);
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 40px;
+            color: #ffeaac;
+        }
+        .end-screen {
+            pointer-events: auto;
+            background: rgba(5, 7, 15, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 60px;
+            padding: 32px 20px;
+            text-align: center;
+            max-width: 420px;
+            width: 88%;
+            margin: auto;
+            border: 2px solid rgba(255, 200, 80, 0.9);
+        }
+        .end-screen h1 {
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #FFD966, #FFB347);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .hidden {
+            display: none;
+        }
+        @media (max-width: 550px) {
+            .question-text { font-size: 1.25rem; }
+            .option-btn { padding: 12px 10px; font-size: 0.9rem; }
+            .stats-panel { padding: 8px 14px; }
+            .score-box, .q-counter { font-size: 1.1rem; }
+            .next-btn { font-size: 1rem; padding: 12px; }
+        }
+        /* Анимация всплывающих уведомлений "Правильно!" / "Неправильно!" */
+        .floating-feedback {
+            position: fixed;
+            top: 35%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2.2rem;
+            font-weight: 900;
+            text-shadow: 0 0 15px black;
+            z-index: 200;
+            pointer-events: none;
+            animation: flyFade 1s ease-out forwards;
+            white-space: nowrap;
+            background: rgba(0,0,0,0.6);
+            padding: 12px 28px;
+            border-radius: 80px;
+            backdrop-filter: blur(12px);
+            letter-spacing: 2px;
+        }
+        .floating-correct {
+            color: #d4ff5e;
+            border: 2px solid #9bff6e;
+            box-shadow: 0 0 30px #2eff7a;
+        }
+        .floating-wrong {
+            color: #ffacac;
+            border: 2px solid #ff6b6b;
+            box-shadow: 0 0 25px #ff3b3b;
+        }
+        @keyframes flyFade {
+            0% { opacity: 0; transform: translate(-50%, 20px) scale(0.8); }
+            20% { opacity: 1; transform: translate(-50%, -20px) scale(1.2); }
+            80% { opacity: 1; transform: translate(-50%, -60px) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -100px) scale(0.9); visibility: hidden; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ПРИВЕТСТВИЕ -->
+    <div id="welcomeOverlay" class="welcome-overlay">
+        <div class="welcome-card">
+            <div class="spark">✨🎓✨</div>
+            <h1>Добро пожаловать!</h1>
+            <p>3D квиз для учителей и учеников.<br>Проверь знания в магической атмосфере.</p>
+            <p><strong>10 вопросов</strong> · Живой наставник · 3D эффекты</p>
+            <button id="startGameBtn" class="start-btn">🌟 Начать игру 🌟</button>
+        </div>
+    </div>
+
+    <div class="ui-container">
+        <div class="stats-panel">
+            <div class="score-box"><span>🎓 Очки:</span> <span id="scoreValue">0</span></div>
+            <div class="q-counter"><span>📚 Вопрос:</span> <span id="qCurrent">1</span>/<span id="qTotal">10</span></div>
+            <button class="reset-btn" id="resetGameBtn">🔄 Заново</button>
+        </div>
+
+        <div id="gameplayArea" style="flex:1; display: flex; align-items: center; justify-content: center;">
+            <div id="questionPanel" class="question-card">
+                <div class="question-text" id="questionText">Загрузка...</div>
+                <div class="options-grid" id="optionsContainer"></div>
+                <button id="nextQuestionBtn" class="next-btn">✨ Следующий вопрос ✨</button>
+                <div id="feedbackMsg" class="feedback"></div>
+            </div>
+            <div id="endPanel" class="end-screen hidden">
+                <h1>🏆 Итоги 🏆</h1>
+                <p id="finalScoreMsg" style="font-size: 1.8rem; margin: 15px; font-weight: bold; color:#FFD966;">0</p>
+                <p id="gradeMessage" style="font-size: 1.2rem;"></p>
+                <button id="playAgainBtn">🌟 Играть снова 🌟</button>
+            </div>
+        </div>
+        <div style="height: 20px;"></div>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+        // === 3D СЦЕНА (яркая, контрастная) ===
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x03061a);
+        scene.fog = new THREE.FogExp2(0x03061a, 0.012);
+        
+        const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(4.5, 3.8, 7.2);
+        camera.lookAt(0, 0.2, 0);
+        
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        document.body.appendChild(renderer.domElement);
+        
+        const labelRenderer = new CSS2DRenderer();
+        labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        labelRenderer.domElement.style.position = 'absolute';
+        labelRenderer.domElement.style.top = '0px';
+        labelRenderer.domElement.style.left = '0px';
+        labelRenderer.domElement.style.pointerEvents = 'none';
+        document.body.appendChild(labelRenderer.domElement);
+        
+        // освещение
+        const ambientLight = new THREE.AmbientLight(0x2a2f4a);
+        scene.add(ambientLight);
+        const mainLight = new THREE.DirectionalLight(0xfff0d0, 1.2);
+        mainLight.position.set(4, 6, 3);
+        mainLight.castShadow = true;
+        scene.add(mainLight);
+        const fillLight = new THREE.PointLight(0x6688ff, 0.5);
+        fillLight.position.set(-2, 2, 4);
+        scene.add(fillLight);
+        const backLight = new THREE.PointLight(0xffaa66, 0.45);
+        backLight.position.set(1, 2, -5);
+        scene.add(backLight);
+        
+        // частицы
+        const particleCount = 1200;
+        const particlesGeometry = new THREE.BufferGeometry();
+        const posArray = new Float32Array(particleCount * 3);
+        for (let i = 0; i < particleCount; i++) {
+            posArray[i*3] = (Math.random() - 0.5) * 45;
+            posArray[i*3+1] = (Math.random() - 0.5) * 18;
+            posArray[i*3+2] = (Math.random() - 0.5) * 30 - 8;
+        }
+        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        const particlesMaterial = new THREE.PointsMaterial({ color: 0xffcc88, size: 0.07, transparent: true, opacity: 0.7 });
+        const particleSystem = new THREE.Points(particlesGeometry, particlesMaterial);
+        scene.add(particleSystem);
+        
+        // кристалл
+        const crystalGeo = new THREE.IcosahedronGeometry(1.1, 0);
+        const crystalMat = new THREE.MeshStandardMaterial({ color: 0xffaa55, emissive: 0x442200, roughness: 0.25, metalness: 0.85 });
+        const crystal = new THREE.Mesh(crystalGeo, crystalMat);
+        crystal.castShadow = true;
+        scene.add(crystal);
+        
+        const ringGeo = new THREE.TorusGeometry(1.45, 0.07, 64, 200);
+        const ringMat = new THREE.MeshStandardMaterial({ color: 0xffaa66, emissive: 0x552200 });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        scene.add(ring);
+        const ring2Geo = new THREE.TorusGeometry(1.85, 0.05, 64, 200);
+        const ring2Mat = new THREE.MeshStandardMaterial({ color: 0x88aaff, emissive: 0x004466 });
+        const ring2 = new THREE.Mesh(ring2Geo, ring2Mat);
+        scene.add(ring2);
+        
+        const gridHelper = new THREE.GridHelper(24, 20, 0xffaa77, 0x4466aa);
+        gridHelper.position.y = -1.6;
+        gridHelper.material.transparent = true;
+        gridHelper.material.opacity = 0.35;
+        scene.add(gridHelper);
+        
+        const floorPlane = new THREE.Mesh(
+            new THREE.PlaneGeometry(14, 14),
+            new THREE.ShadowMaterial({ opacity: 0.5, color: 0x000000, transparent: true, side: THREE.DoubleSide })
+        );
+        floorPlane.rotation.x = -Math.PI / 2;
+        floorPlane.position.y = -1.7;
+        floorPlane.receiveShadow = true;
+        scene.add(floorPlane);
+        
+        // живой наставник
+        const livingGroup = new THREE.Group();
+        const bodyGlow = new THREE.Mesh(new THREE.SphereGeometry(0.52, 32, 32), new THREE.MeshStandardMaterial({ color: 0xffaa77, emissive: 0x552200, emissiveIntensity: 0.5 }));
+        bodyGlow.castShadow = true;
+        livingGroup.add(bodyGlow);
+        const leftEye = new THREE.Mesh(new THREE.SphereGeometry(0.13, 24, 24), new THREE.MeshStandardMaterial({ color: 0xfff5cc }));
+        leftEye.position.set(-0.22, 0.21, 0.6);
+        const rightEye = new THREE.Mesh(new THREE.SphereGeometry(0.13, 24, 24), new THREE.MeshStandardMaterial({ color: 0xfff5cc }));
+        rightEye.position.set(0.22, 0.21, 0.6);
+        const pupilL = new THREE.Mesh(new THREE.SphereGeometry(0.07, 16, 16), new THREE.MeshStandardMaterial({ color: 0x000000 }));
+        pupilL.position.set(-0.22, 0.18, 0.74);
+        const pupilR = new THREE.Mesh(new THREE.SphereGeometry(0.07, 16, 16), new THREE.MeshStandardMaterial({ color: 0x000000 }));
+        pupilR.position.set(0.22, 0.18, 0.74);
+        livingGroup.add(leftEye, rightEye, pupilL, pupilR);
+        const hat = new THREE.Mesh(new THREE.ConeGeometry(0.48, 0.45, 8), new THREE.MeshStandardMaterial({ color: 0xdd6644, emissive: 0x331100 }));
+        hat.position.y = 0.5;
+        livingGroup.add(hat);
+        livingGroup.position.set(2.3, -1.1, 2.0);
+        scene.add(livingGroup);
+        
+        const books = [];
+        for (let i = 0; i < 8; i++) {
+            const book = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.12, 0.65), new THREE.MeshStandardMaterial({ color: 0xbc8f6a, emissive: 0x221100 }));
+            book.position.set(Math.sin(i) * 3.2, Math.cos(i*1.8)*0.7 - 1.2, Math.cos(i) * 2.8);
+            book.castShadow = true;
+            scene.add(book);
+            books.push(book);
+        }
+        
+        const tipDiv = document.createElement('div');
+        tipDiv.textContent = '📖 Мудрый наставник 📖';
+        tipDiv.style.color = '#FFE5B4';
+        tipDiv.style.fontSize = '14px';
+        tipDiv.style.fontWeight = 'bold';
+        tipDiv.style.background = 'rgba(0,0,0,0.7)';
+        tipDiv.style.padding = '4px 14px';
+        tipDiv.style.borderRadius = '30px';
+        tipDiv.style.border = '1px solid #ffbb55';
+        const labelObj = new CSS2DObject(tipDiv);
+        labelObj.position.set(2.3, -0.55, 2.0);
+        scene.add(labelObj);
+        
+        // === ИГРОВАЯ ЛОГИКА ===
+        const questions = [
+            { text: "Какая формула соответствует второму закону Ньютона?", options: ["F = m·a", "E = mc²", "P = m·g", "A = F·s"], correct: 0 },
+            { text: "Какой металл обозначается символом 'Au'?", options: ["Серебро", "Золото", "Платина", "Алюминий"], correct: 1 },
+            { text: "Кто автор романа 'Преступление и наказание'?", options: ["Толстой", "Достоевский", "Чехов", "Тургенев"], correct: 1 },
+            { text: "Самая большая планета Солнечной системы?", options: ["Юпитер", "Сатурн", "Нептун", "Уран"], correct: 0 },
+            { text: "Столица Японии?", options: ["Сеул", "Токио", "Пекин", "Осака"], correct: 1 },
+            { text: "Что такое биосфера?", options: ["Оболочка с живыми организмами", "Атмосфера", "Гидросфера", "Литосфера"], correct: 0 },
+            { text: "Устройство для вывода изображения?", options: ["Монитор", "Клавиатура", "Процессор", "Сканер"], correct: 0 },
+            { text: "Какой знак обозначает квадратный корень?", options: ["√", "^", "π", "Σ"], correct: 0 },
+            { text: "Какая эпоха предшествовала Средневековью?", options: ["Античность", "Возрождение", "Новое время", "Просвещение"], correct: 0 },
+            { text: "Что измеряет амперметр?", options: ["Силу тока", "Напряжение", "Мощность", "Сопротивление"], correct: 0 }
+        ];
+        let activeQuestions = questions.slice(0, 10);
+        let currentIndex = 0;
+        let score = 0;
+        let answered = false;
+        let gameActive = true; // флаг, активна ли игра (после приветствия)
+        const totalQ = activeQuestions.length;
+        document.getElementById('qTotal').innerText = totalQ;
+        
+        const questionTextEl = document.getElementById('questionText');
+        const optionsContainer = document.getElementById('optionsContainer');
+        const nextBtn = document.getElementById('nextQuestionBtn');
+        const resetBtn = document.getElementById('resetGameBtn');
+        const questionPanelDiv = document.getElementById('questionPanel');
+        const endPanelDiv = document.getElementById('endPanel');
+        const scoreSpan = document.getElementById('scoreValue');
+        const qCurrentSpan = document.getElementById('qCurrent');
+        const feedbackMsgDiv = document.getElementById('feedbackMsg');
+        const welcomeOverlay = document.getElementById('welcomeOverlay');
+        
+        // функция отображения плавающей анимации
+        function showFloatingFeedback(isCorrect) {
+            const div = document.createElement('div');
+            div.className = 'floating-feedback';
+            if (isCorrect) {
+                div.innerText = '✅ ПРАВИЛЬНО! ✅';
+                div.classList.add('floating-correct');
+            } else {
+                div.innerText = '❌ НЕПРАВИЛЬНО! ❌';
+                div.classList.add('floating-wrong');
+            }
+            document.body.appendChild(div);
+            setTimeout(() => { if(div && div.remove) div.remove(); }, 1000);
+        }
+        
+        function updateUI() {
+            scoreSpan.innerText = score;
+            qCurrentSpan.innerText = currentIndex + 1;
+        }
+        
+        function loadQuestion() {
+            if (!gameActive) return;
+            answered = false;
+            feedbackMsgDiv.innerHTML = '';
+            const q = activeQuestions[currentIndex];
+            questionTextEl.innerText = q.text;
+            optionsContainer.innerHTML = '';
+            q.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.innerText = opt;
+                btn.classList.add('option-btn');
+                btn.addEventListener('click', (e) => handleAnswer(idx, btn));
+                optionsContainer.appendChild(btn);
+            });
+            nextBtn.disabled = false;
+            crystal.material.emissiveIntensity = 0.65;
+            setTimeout(() => { if(crystal.material) crystal.material.emissiveIntensity = 0.2; }, 350);
+        }
+        
+        function handleAnswer(clickedIdx, btnElement) {
+            if (!gameActive || answered) return;
+            answered = true;
+            const currentQ = activeQuestions[currentIndex];
+            const isCorrect = (clickedIdx === currentQ.correct);
+            
+            // ПОКАЗЫВАЕМ ЭФФЕКТ "ПРАВИЛЬНО/НЕПРАВИЛЬНО"
+            showFloatingFeedback(isCorrect);
+            
+            const allBtns = document.querySelectorAll('.option-btn');
+            allBtns.forEach((btn, idx) => {
+                btn.disabled = true;
+                if (idx === currentQ.correct) btn.classList.add('correct-highlight');
+                if (idx === clickedIdx && idx !== currentQ.correct) btn.classList.add('wrong-highlight');
+            });
+            
+            if (isCorrect) {
+                score += 10;
+                feedbackMsgDiv.innerHTML = '✅ Верно! +10 очков! ✅';
+                feedbackMsgDiv.style.color = '#ccffaa';
+                livingGroup.position.y = -1.1 + 0.12;
+                setTimeout(() => { if(livingGroup) livingGroup.position.y = -1.1; }, 200);
+                crystal.material.emissiveIntensity = 1.0;
+                setTimeout(() => { if(crystal.material) crystal.material.emissiveIntensity = 0.2; }, 400);
+                particleSystem.material.color.setHex(0xffdd99);
+                setTimeout(() => { particleSystem.material.color.setHex(0xffcc88); }, 500);
+            } else {
+                feedbackMsgDiv.innerHTML = `❌ Неверно! Правильный ответ: ${currentQ.options[currentQ.correct]} ❌`;
+                feedbackMsgDiv.style.color = '#ffbcaf';
+                livingGroup.rotation.z = 0.18;
+                setTimeout(() => { if(livingGroup) livingGroup.rotation.z = 0; }, 280);
+            }
+            updateUI();
+        }
+        
+        function nextQuestion() {
+            if (!gameActive) return;
+            if (!answered && currentIndex < totalQ) {
+                feedbackMsgDiv.innerHTML = '⚠️ Сначала выбери ответ! ⚠️';
+                return;
+            }
+            if (currentIndex + 1 < totalQ) {
+                currentIndex++;
+                loadQuestion();
+                updateUI();
+            } else {
+                finishGame();
+            }
+        }
+        
+        function finishGame() {
+            if (!gameActive) return;
+            questionPanelDiv.classList.add('hidden');
+            endPanelDiv.classList.remove('hidden');
+            const finalMsg = document.getElementById('finalScoreMsg');
+            finalMsg.innerText = `${score} / ${totalQ * 10}`;
+            const gradeEl = document.getElementById('gradeMessage');
+            let gradeText = "";
+            if (score >= 90) gradeText = "🌟 Гранд-мастер! Блестяще! 🌟";
+            else if (score >= 70) gradeText = "🎓 Отлично! Ты эрудит!";
+            else if (score >= 50) gradeText = "📚 Хороший результат, учись дальше!";
+            else gradeText = "🌱 Продолжай, знания придут!";
+            gradeEl.innerText = gradeText;
+            particleSystem.material.color.setHex(0xffaa77);
+        }
+        
+        function resetGame() {
+            if (!gameActive) return;
+            currentIndex = 0;
+            score = 0;
+            answered = false;
+            updateUI();
+            questionPanelDiv.classList.remove('hidden');
+            endPanelDiv.classList.add('hidden');
+            loadQuestion();
+            feedbackMsgDiv.innerHTML = '';
+            crystal.material.emissiveIntensity = 0.2;
+            particleSystem.material.color.setHex(0xffcc88);
+        }
+        
+        // === ЗАПУСК ИГРЫ ПОСЛЕ ПРИВЕТСТВИЯ ===
+        function startGame() {
+            welcomeOverlay.classList.add('hidden-overlay');
+            gameActive = true;
+            resetGame(); // инициализация первого вопроса
+        }
+        
+        // привязка событий
+        document.getElementById('startGameBtn').addEventListener('click', startGame);
+        nextBtn.addEventListener('click', nextQuestion);
+        resetBtn.addEventListener('click', resetGame);
+        document.getElementById('playAgainBtn').addEventListener('click', () => {
+            resetGame();
+            endPanelDiv.classList.add('hidden');
+            questionPanelDiv.classList.remove('hidden');
+        });
+        
+        // начальное состояние: игра не активна, пока не нажали старт
+        gameActive = false;
+        // блокируем кнопки до старта
+        nextBtn.disabled = true;
+        resetBtn.disabled = true;
+        // заполним заглушкой вопрос
+        questionTextEl.innerText = "🌟 Нажмите 'Начать игру' 🌟";
+        optionsContainer.innerHTML = '<button class="option-btn" disabled>✨ Добро пожаловать ✨</button>';
+        
+        // После старта активируем
+        function enableGameButtons() {
+            nextBtn.disabled = false;
+            resetBtn.disabled = false;
+        }
+        const originalStart = startGame;
+        window.startGame = function() {
+            originalStart();
+            enableGameButtons();
+        };
+        document.getElementById('startGameBtn').onclick = () => {
+            startGame();
+            enableGameButtons();
+        };
+        
+        // анимация 3D (постоянно работает)
+        let timeAnim = 0;
+        function animateScene() {
+            requestAnimationFrame(animateScene);
+            timeAnim += 0.014;
+            crystal.rotation.y = timeAnim * 0.65;
+            crystal.rotation.x = Math.sin(timeAnim * 0.4) * 0.2;
+            ring.rotation.z = timeAnim * 0.55;
+            ring.rotation.x = Math.sin(timeAnim * 0.3) * 0.4;
+            ring2.rotation.y = timeAnim * 0.45;
+            ring2.rotation.x = timeAnim * 0.2;
+            particleSystem.rotation.y = timeAnim * 0.04;
+            particleSystem.rotation.x = Math.sin(timeAnim * 0.1) * 0.08;
+            books.forEach((book, idx) => {
+                book.position.y += Math.sin(timeAnim * 1.6 + idx) * 0.0025;
+                book.rotation.z = Math.sin(timeAnim + idx) * 0.15;
+            });
+            const blink = 0.9 + Math.sin(timeAnim * 7) * 0.12;
+            pupilL.scale.set(blink, blink, 1);
+            pupilR.scale.set(blink, blink, 1);
+            livingGroup.position.x = 2.3 + Math.sin(timeAnim * 1.1) * 0.025;
+            camera.position.x += (0 - camera.position.x) * 0.02;
+            camera.lookAt(0, 0.3, 0);
+            renderer.render(scene, camera);
+            labelRenderer.render(scene, camera);
+        }
+        animateScene();
+        
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+   
